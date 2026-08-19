@@ -211,6 +211,7 @@ void WINAPI hk_ClockPageOk(void* pThis) {
 
 int32_t WINAPI hk_GetFrameCount() {
     UpdateTitleWatermark();
+    UpdatePendingProfilePrivacyUI();
 
     if (g_ShouldShowDialog.load()) {
         g_ShouldShowDialog.store(false);
@@ -269,6 +270,42 @@ static bool CheckCanUseShortcut() {
     return true;
 }
 
+static void UpdateProfilePrivacyRuntimeReady(bool canOpenUI) {
+    if (g_ProfilePrivacyRuntimeReady.load(std::memory_order_relaxed)) return;
+
+    const auto& cfg = Config::Get();
+    if (!cfg.hide_profile_uid && !cfg.hide_profile_birthday) return;
+
+    static ULONGLONG canOpenSince = 0;
+    const ULONGLONG now = GetTickCount64();
+    const bool escapePressed = (GetAsyncKeyState(VK_ESCAPE) & 0x8000) != 0;
+
+    // An ESC press is an immediate signal that the player is interacting with
+    // the main UI. This keeps privacy blocking ready for a freshly opened menu.
+    if (escapePressed && canOpenUI) {
+        g_ProfilePrivacyRuntimeReady.store(true, std::memory_order_relaxed);
+        return;
+    }
+
+    // Do not fall back to CheckCanUseShortcut's permissive result while its
+    // game function is unresolved: that period includes early scene loading.
+    if (!p_CheckCanEnter.load(std::memory_order_relaxed) || !canOpenUI) {
+        canOpenSince = 0;
+        return;
+    }
+
+    if (canOpenSince == 0) {
+        canOpenSince = now;
+        return;
+    }
+
+    // Latch once normal UI entry has remained available across the loading
+    // transition. Afterwards SetActive can inspect profile objects normally.
+    if (now - canOpenSince >= 500) {
+        g_ProfilePrivacyRuntimeReady.store(true, std::memory_order_relaxed);
+    }
+}
+
 static bool IsActiveGameObject(const char* name) {
     auto findString = (tFindString)p_FindString.load();
     auto findGameObject = (tFindGameObject)p_FindGameObject.load();
@@ -321,6 +358,7 @@ int32_t WINAPI hk_ChangeFov(void* __this, float value) {
 
     DWORD now = GetTickCount();
     bool canOpenUI = CheckCanUseShortcut();
+    UpdateProfilePrivacyRuntimeReady(canOpenUI);
     bool isFocused = CheckWindowFocused(GetForegroundWindow());
 
     if (g_RequestCraft.load()) {
@@ -658,6 +696,7 @@ bool Hooks::IsGameUpdateInit() { return o_GetFrameCount.load() != nullptr; }
 void Hooks::RequestOpenCraft() { g_RequestCraft.store(true); }
 
 void Hooks::TriggerReloadPopup() {
+    NotifyProfilePrivacyConfigReload();
     g_RequestReloadPopup.store(true);
 }
 

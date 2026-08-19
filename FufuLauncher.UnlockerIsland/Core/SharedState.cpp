@@ -39,6 +39,7 @@ std::atomic<void*> o_UpdateInnerTarget{ nullptr };
 
 std::atomic<bool> g_RequestReloadPopup{ false };
 std::atomic<bool> g_GameUpdateInit{ false };
+std::atomic<bool> g_ProfilePrivacyRuntimeReady{ false };
 std::atomic<bool> g_RequestCraft{ false };
 std::atomic<bool> g_TouchScreenInit{ false };
 

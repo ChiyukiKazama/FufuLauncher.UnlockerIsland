@@ -7,6 +7,15 @@ Licensed under the AGPL-3.0 License.
 
 void UpdateHideUID();
 void UpdateHideMainUI();
+bool UpdateHideProfileUID();
+void UpdateHideProfileBirthday();
+void UpdateProfilePrivacyUI();
+bool IsProfilePrivacyUIActive();
+void BeginProfilePrivacyUI();
+void EndProfilePrivacyUI();
+void NotifyProfileUIDBlocked();
+void NotifyProfilePrivacyConfigReload();
+void UpdatePendingProfilePrivacyUI();
 void UpdateTitleWatermark();
 void WINAPI hk_SetupQuestBanner(void* __this);
 void WINAPI hk_ShowDamage(void* a, int b, int c, int d, float e, Il2CppString* f, void* g, void* h, int i, char j, float k);

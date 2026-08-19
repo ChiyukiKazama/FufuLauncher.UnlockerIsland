@@ -97,6 +97,7 @@ extern std::atomic<void*> o_UpdateInnerTarget;
 
 extern std::atomic<bool> g_RequestReloadPopup;
 extern std::atomic<bool> g_GameUpdateInit;
+extern std::atomic<bool> g_ProfilePrivacyRuntimeReady;
 extern std::atomic<bool> g_RequestCraft;
 extern std::atomic<bool> g_TouchScreenInit;
 
