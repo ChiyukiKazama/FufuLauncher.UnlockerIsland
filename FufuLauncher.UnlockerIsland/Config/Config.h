@@ -69,6 +69,10 @@ struct ModConfig {
 
     bool hide_main_ui = false;
 
+    bool hide_profile_uid = false;
+
+    bool hide_profile_birthday = false;
+
     bool hide_grass = false;
 
     bool hide_grass_indiscriminate = false;

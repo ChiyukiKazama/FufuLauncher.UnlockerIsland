@@ -180,6 +180,23 @@ namespace GameStrings {
     inline constexpr const char* QuestBannerPath = "Canvas/Pages/InLevelMapPage/GrpMap/GrpPointTips/Layout/QuestBanner";
     inline constexpr const char* ProfileLayerPath = "/Canvas/Pages/PlayerProfilePage";
     inline constexpr const char* UIDPathMain = "/Canvas/Pages/PlayerProfilePage/GrpProfile/Right/GrpPlayerCard/UID";
+    inline constexpr const char* ProfileUIDPath = "/Canvas/Pages/PlayerProfilePage/GrpProfile/Right/GrpPlayerCard/UID";
+    inline constexpr const char* ProfileBirthdayTargets[] = {
+        "/Canvas/Pages/PlayerProfilePage/GrpProfile/Right/GrpPlayerCard/Birthday",
+        "/Canvas/Pages/PlayerProfilePage/GrpProfile/Right/GrpPlayerCard/BirthDay",
+        "/Canvas/Pages/PlayerProfilePage/GrpProfile/Right/GrpPlayerCard/BirthdaySlot",
+        "/Canvas/Pages/PlayerProfilePage/GrpProfile/Right/GrpPlayerCard/GrpBirthday",
+        "/Canvas/Pages/PlayerProfilePage/GrpProfile/Left/GrpPlayerInfo/Birthday",
+        "/Canvas/Pages/PlayerProfilePage/GrpProfile/Left/GrpPlayerInfo/BirthdaySlot",
+        "/Canvas/Pages/PlayerProfilePage/GrpProfile/Left/GrpBaseInfo/Birthday",
+        "/Canvas/Pages/PlayerProfilePage/GrpProfile/Left/GrpBaseInfo/BirthdaySlot",
+        "Birthday",
+        "BirthDay",
+        "BirthdaySlot",
+        "Birthdate",
+        "BirthDate",
+        "GrpBirthday"
+    };
     inline constexpr const char* UIDPathWatermark = "/BetaWatermarkCanvas(Clone)/Panel/TxtUID";
 }
 
