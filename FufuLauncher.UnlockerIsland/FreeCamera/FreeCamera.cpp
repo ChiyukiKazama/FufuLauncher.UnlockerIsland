@@ -1,4 +1,4 @@
-/*
+﻿/*
 Copyright (c) FufuLauncher Dev Team. All rights reserved.
 Licensed under the AGPL-3.0 License.
 */
@@ -48,7 +48,7 @@ namespace FreeCamera {
                 !g_Locked.load(std::memory_order_relaxed)) {
                 if (msg == WM_KEYDOWN || msg == WM_KEYUP ||
                     msg == WM_SYSKEYDOWN || msg == WM_SYSKEYUP) {
-                    if (IsFlightKey(static_cast<DWORD>(wParam))) return 0;
+                    if (IsFlightKey(wParam)) return 0;
                 }
                 if (msg == WM_INPUT) {
                     UINT size = 0;
@@ -119,9 +119,6 @@ namespace FreeCamera {
             g_Active.store(active, std::memory_order_relaxed);
             if (active) {
                 g_Locked.store(false, std::memory_order_relaxed);
-                // CameraOffset runs before FreeCamera in the shared hook. Defer
-                // the initial position capture until it has restored the base
-                // camera position, otherwise the offset is baked into free cam.
                 g_NeedsInitialPosition.store(true, std::memory_order_relaxed);
                 InterlockedExchange(&g_MouseDX, 0);
                 InterlockedExchange(&g_MouseDY, 0);
@@ -255,8 +252,7 @@ namespace FreeCamera {
             WH_KEYBOARD_LL, KbProc, GetModuleHandleA(nullptr), 0);
         g_Ready.store(true, std::memory_order_relaxed);
         std::cout << "   -> FreeCamera ready." << std::endl;
-
-        // Free-camera raw mouse input still needs the Unity window procedure.
+        
         CreateThread(nullptr, 0, InputThread, nullptr, 0, nullptr);
         std::cout << "   -> Free-camera input window hook scheduled." << std::endl;
     }

@@ -1,4 +1,4 @@
-/*
+﻿/*
 Copyright (c) FufuLauncher Dev Team. All rights reserved.
 Licensed under the AGPL-3.0 License.
 */
@@ -22,6 +22,7 @@ Licensed under the AGPL-3.0 License.
 #include "../FreeCamera/FreeCamera.h"
 #include "../Camera/Camera.h"
 #include "../CameraOffset/CameraOffset.h"
+#include "../PaimonFollow/PaimonFollow.h"
 #include <iostream>
 #include <atomic>
 #include <mutex>
@@ -107,13 +108,16 @@ static uintptr_t ResolveAddress(uintptr_t addr) {
     return addr;
 }
 
-static void __fastcall hk_BuildCmdBuffers(void* pThis) {
+static __int64 __fastcall hk_UpdateInnerTarget(void* pThis, void* a2, double a3) {
     if (Config::Get().enable_low_render_scale) {
-        constexpr uintptr_t kScaleOffset = 0x88;
-        *(float*)((uintptr_t)pThis + kScaleOffset) = Config::Get().render_scale_value;
+        uintptr_t p = (uintptr_t)pThis;
+        *(float*)(p + 0x88) = Config::Get().render_scale_value;
+        *(__int64*)(p + 0x94) = 0;
+        *(__int64*)(p + 0x9C) = 0;
     }
-    auto orig = (tBuildCmdBuffers)o_BuildCmdBuffers.load();
-    if (orig) orig(pThis);
+    auto orig = (tUpdateInnerTarget)o_UpdateInnerTarget.load();
+    if (orig) return orig(pThis, a2, a3);
+    return 0;
 }
 
 static void* GetGetActiveAddr() {
@@ -247,10 +251,7 @@ int32_t WINAPI hk_GetFrameCount() {
     auto& cfg = Config::Get();
     if (cfg.enable_fps_override)
         return cfg.selected_fps;
-
-    if (ret >= 60) return 60;
-    if (ret >= 45) return 45;
-    if (ret >= 30) return 30;
+    
     return ret;
 }
 
@@ -351,6 +352,7 @@ int32_t WINAPI hk_ChangeFov(void* __this, float value) {
         UpdateHideUID();
         UpdateHideMainUI();
         UpdateOpenMap();
+        PaimonFollow::Tick();
     }
 
 
@@ -485,16 +487,24 @@ bool Hooks::Init() {
     SCAN_REL("SetFrameCount", Patterns::SetFrameCount, o_SetFrameCount);
     HOOK_DIR("ChangeFOV", Patterns::ChangeFOV, hk_ChangeFov, o_ChangeFov);
     {
-        HMODULE hMod = GetModuleHandle(NULL);
-        uintptr_t offsetTouchInput = StringToAddr(Offsets::TouchInputOffset);
-        if (hMod && offsetTouchInput) {
-            void* touchInputAddr = (void*)((uintptr_t)hMod + offsetTouchInput);
-            p_SwitchInput.store(touchInputAddr);
+        void* touchInputAddr = Scanner::ScanMainMod(Patterns::SwitchInputDeviceToTouchScreen);
+        if (touchInputAddr) {
             LogOffset("SwitchInputDeviceToTouchScreen", touchInputAddr, touchInputAddr);
-            std::cout << "[SCAN] SwitchInputDeviceToTouchScreen resolved via offset at: 0x"
-                      << std::hex << offsetTouchInput << std::dec << '\n';
+            std::cout << "[SCAN] SwitchInputDeviceToTouchScreen resolved via signature.\n";
         } else {
-            std::cout << "[ERR] SwitchInputDeviceToTouchScreen offset is missing.\n";
+            HMODULE hMod = GetModuleHandle(NULL);
+            uintptr_t offsetTouchInput = StringToAddr(Offsets::TouchInputOffset);
+            if (hMod && offsetTouchInput) {
+                touchInputAddr = (void*)((uintptr_t)hMod + offsetTouchInput);
+                LogOffset("SwitchInputDeviceToTouchScreen", touchInputAddr, touchInputAddr);
+                std::cout << "[SCAN] SwitchInputDeviceToTouchScreen resolved via offset: 0x"
+                          << std::hex << offsetTouchInput << std::dec << '\n';
+            } else {
+                std::cout << "[ERR] SwitchInputDeviceToTouchScreen offset is missing.\n";
+            }
+        }
+        if (touchInputAddr) {
+            p_SwitchInput.store(touchInputAddr);
         }
     }
     HOOK_DIR("QuestBanner", Patterns::QuestBanner, hk_SetupQuestBanner, o_SetupQuestBanner);
@@ -529,6 +539,7 @@ bool Hooks::Init() {
     SCAN_DIR("CheckCanOpenMap", Patterns::CheckCanOpenMap, p_CheckCanOpenMap);
     SCAN_DIR("StringNew", Patterns::StringNew, p_StringNew);
     SCAN_DIR("ShowDialog", Patterns::ShowDialog, p_ShowDialog);
+    SCAN_DIR("AvatarPaimonAppear", Patterns::AvatarPaimonAppear, p_AvatarPaimonAppear);
 
     void* eventCameraAddr = nullptr;
     uintptr_t offsetEventCam = StringToAddr(Offsets::EventCameraOffset);
@@ -655,20 +666,21 @@ bool Hooks::Init() {
     Camera::Init();
     CameraOffset::Init();
     FreeCamera::Init();
+    PaimonFollow::Init();
     
-    if (!isOS && Config::Get().enable_low_render_scale) {
-        uintptr_t offsetBuildCmd = StringToAddr(Offsets::BuildCmdBuffersOffset);
-        if (offsetBuildCmd) {
-            void* buildCmdAddr = (void*)((uintptr_t)GetModuleHandle(NULL) + offsetBuildCmd);
-            LogOffset("BuildCmdBuffers", buildCmdAddr, buildCmdAddr);
-            std::cout << "[SCAN] BuildCmdBuffers resolved via offset at: 0x" << std::hex << offsetBuildCmd << std::dec << std::endl;
-            if (MH_CreateHook(buildCmdAddr, (void*)hk_BuildCmdBuffers, (void**)&o_BuildCmdBuffers) == MH_OK) {
-                std::cout << "   -> BuildCmdBuffers Hook Ready (CN)." << std::endl;
+    if (Config::Get().enable_low_render_scale) {
+        uintptr_t offsetUpdateTarget = StringToAddr(Offsets::UpdateInnerTargetOffset);
+        if (offsetUpdateTarget) {
+            void* updateTargetAddr = (void*)((uintptr_t)GetModuleHandle(NULL) + offsetUpdateTarget);
+            LogOffset("UpdateInnerTarget", updateTargetAddr, updateTargetAddr);
+            std::cout << "[SCAN] UpdateInnerTarget resolved via offset at: 0x" << std::hex << offsetUpdateTarget << std::dec << std::endl;
+            if (MH_CreateHook(updateTargetAddr, (void*)hk_UpdateInnerTarget, (void**)&o_UpdateInnerTarget) == MH_OK) {
+                std::cout << "   -> UpdateInnerTarget Hook Ready." << std::endl;
             } else {
-                std::cout << "   -> [ERR] BuildCmdBuffers MH_CreateHook Failed." << std::endl;
+                std::cout << "   -> [ERR] UpdateInnerTarget MH_CreateHook Failed." << std::endl;
             }
         } else {
-            std::cout << "[ERR] BuildCmdBuffers offset is missing." << std::endl;
+            std::cout << "[ERR] UpdateInnerTarget offset is missing." << std::endl;
         }
     }
 

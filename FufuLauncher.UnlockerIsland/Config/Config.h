@@ -100,6 +100,8 @@ struct ModConfig {
     float free_cam_move_speed = 8.0f;
     float free_cam_sprint_mult = 3.0f;
     float free_cam_mouse_sensitivity = 0.12f;
+
+    bool enable_paimon_follow = false;
 };
 
 namespace Config {

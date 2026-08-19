@@ -1,4 +1,4 @@
-/*
+﻿/*
 Copyright (c) FufuLauncher Dev Team. All rights reserved.
 Licensed under the AGPL-3.0 License.
 */
@@ -32,9 +32,10 @@ std::atomic<void*> p_GetName{ nullptr };
 std::atomic<void*> o_send{ nullptr };
 std::atomic<void*> o_sendto{ nullptr };
 std::atomic<void*> p_GetActive{ nullptr };
+std::atomic<void*> p_AvatarPaimonAppear{ nullptr };
 std::atomic<void*> p_StringNew{ nullptr };
 std::atomic<void*> p_ShowDialog{ nullptr };
-std::atomic<void*> o_BuildCmdBuffers{ nullptr };
+std::atomic<void*> o_UpdateInnerTarget{ nullptr };
 
 std::atomic<bool> g_RequestReloadPopup{ false };
 std::atomic<bool> g_GameUpdateInit{ false };

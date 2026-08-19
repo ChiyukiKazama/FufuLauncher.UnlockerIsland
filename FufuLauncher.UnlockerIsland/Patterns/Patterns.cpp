@@ -24,7 +24,7 @@ namespace Offsets {
     std::string DamageColor2Offset;
     std::string DamageColor3Offset;
     std::string DamageColor4Offset;
-    std::string BuildCmdBuffersOffset;
+    std::string UpdateInnerTargetOffset;
     std::string SetActiveOffset;
 
     void InitOffsets(bool isOS) {
@@ -45,7 +45,7 @@ namespace Offsets {
             DamageColor2Offset = Patterns::OS::DamageColor2;
             DamageColor3Offset = Patterns::OS::DamageColor3;
             DamageColor4Offset = Patterns::OS::DamageColor4;
-            BuildCmdBuffersOffset = "";
+            UpdateInnerTargetOffset = Patterns::OS::UpdateInnerTargetOffset;
             SetActiveOffset = Patterns::OS::SetActiveOffset;
             std::cout << "[INFO] Pre-initialized Global (OS) Offsets from hardcode" << std::endl;
         } else {
@@ -65,7 +65,7 @@ namespace Offsets {
             DamageColor2Offset = Patterns::CN::DamageColor2;
             DamageColor3Offset = Patterns::CN::DamageColor3;
             DamageColor4Offset = Patterns::CN::DamageColor4;
-            BuildCmdBuffersOffset = Patterns::CN::BuildCmdBuffersOffset;
+            UpdateInnerTargetOffset = Patterns::CN::UpdateInnerTargetOffset;
             SetActiveOffset = Patterns::CN::SetActiveOffset;
             std::cout << "[INFO] Pre-initialized China (CN) Offsets from hardcode" << std::endl;
         }

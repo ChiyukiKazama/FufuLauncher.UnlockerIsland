@@ -181,17 +181,17 @@ void RecursiveScanAndInject(HANDLE hProcess, const std::wstring& directory, int&
                         
                         if (GetFileAttributesW(targetDllPath.c_str()) != INVALID_FILE_ATTRIBUTES) {
                             std::string sFileName = WStringToString(targetDllName);
-                            WriteLog("发现配置文件指向的插件: " + sFileName + "，正在注入...");
+                            WriteLog("[INFO] Plugin referenced by configuration file discovered: " + sFileName + ". Initiating injection...");
 
                             if (InjectDll(hProcess, targetDllPath)) {
-                                WriteLog("插件注入成功: " + sFileName);
+                                WriteLog("[INFO] Plugin injection completed successfully: " + sFileName);
                                 injectedCount++;
                             } else {
-                                WriteLog("错误: 插件注入失败: " + sFileName);
+                                WriteLog("[ERROR] Plugin injection failed: " + sFileName);
                             }
                         } else {
                             std::string sFileName = WStringToString(targetDllName);
-                            WriteLog("警告: 配置文件指向的插件文件不存在: " + sFileName);
+                            WriteLog("[WARN] Plugin file referenced by configuration file not found: " + sFileName);
                         }
                     }
                 }
@@ -209,36 +209,36 @@ void InjectPlugins(HANDLE hProcess) {
 
     if (GetFileAttributesW(pluginsDir.c_str()) == INVALID_FILE_ATTRIBUTES) {
         CreateDirectoryW(pluginsDir.c_str(), NULL);
-        WriteLog("创建 Plugins 目录: " + WStringToString(pluginsDir));
+        WriteLog("[INFO] Plugins directory created: " + WStringToString(pluginsDir));
     }
 
     std::wstring offsetJsonPath = pluginsDir + L"\\offset.json";
     if (GetFileAttributesW(offsetJsonPath.c_str()) != INVALID_FILE_ATTRIBUTES) {
-        WriteLog("监测到历史下载文件 offset.json，正在执行移除...");
+        WriteLog("[INFO] Stale artifact from a previous download detected: offset.json. Removing...");
         if (DeleteFileW(offsetJsonPath.c_str())) {
-            WriteLog("历史文件 offset.json 移除成功");
+            WriteLog("[INFO] Stale artifact offset.json removed successfully.");
         } else {
-            WriteLog("警告: 无法移除 offset.json，错误码: " + std::to_string(GetLastError()));
+            WriteLog("[WARN] Failed to remove stale artifact offset.json. Error code: " + std::to_string(GetLastError()));
         }
     }
 
-    WriteLog("正在递归扫描插件目录寻找 config.ini : " + WStringToString(pluginsDir));
+    WriteLog("[INFO] Recursively scanning plugin directory for config.ini entries: " + WStringToString(pluginsDir));
     
     int totalInjected = 0;
     RecursiveScanAndInject(hProcess, pluginsDir, totalInjected);
 
-    WriteLog("插件加载完成，共注入: " + std::to_string(totalInjected) + " 个插件");
+    WriteLog("[INFO] Plugin loading phase finished. Total plugins injected: " + std::to_string(totalInjected));
 }
 
 extern "C" {
     
     LAUNCHER_API int LaunchGameAndInject(const wchar_t* gamePath, const wchar_t* dllPath, const wchar_t* commandLineArgs, wchar_t* errorMessage, int errorMessageSize) {
-        WriteLog("=== 启动会话开始 ===");
+        WriteLog("Launcher session started");
         HideConsole();
         
         if (!ValidateGamePath(gamePath)) {
-            if (errorMessage) wcsncpy_s(errorMessage, errorMessageSize, L"游戏路径无效", _TRUNCATE);
-            WriteLog("错误: 游戏路径无效");
+            if (errorMessage) wcsncpy_s(errorMessage, errorMessageSize, L"Invalid game executable path.", _TRUNCATE);
+            WriteLog("[ERROR] Invalid game executable path.");
             return 1;
         }
 
@@ -256,8 +256,8 @@ extern "C" {
         PROCESS_INFORMATION pi = {};
         
         if (!CreateProcessW(gamePath, pCmdLine, nullptr, nullptr, FALSE, CREATE_SUSPENDED, nullptr, workingDir.c_str(), &si, &pi)) {
-            if (errorMessage) wcsncpy_s(errorMessage, errorMessageSize, L"创建进程失败", _TRUNCATE);
-            WriteLog("错误: CreateProcessW 失败 " + std::to_string(GetLastError()));
+            if (errorMessage) wcsncpy_s(errorMessage, errorMessageSize, L"Failed to create the game process.", _TRUNCATE);
+            WriteLog("[ERROR] CreateProcessW invocation failed. Error code: " + std::to_string(GetLastError()));
             if (pCmdLine) delete[] pCmdLine;
             return 3;
         }
@@ -269,7 +269,7 @@ extern "C" {
         CloseHandle(pi.hProcess);
         if (pCmdLine) delete[] pCmdLine;
         
-        WriteLog("=== 启动会话完成 ===");
+        WriteLog("Launcher session completed");
         return 0;
     }
 

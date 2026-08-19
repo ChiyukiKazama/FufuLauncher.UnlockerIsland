@@ -164,17 +164,17 @@ void RecursiveScanAndInject(HANDLE hProcess, HANDLE hThread, const std::wstring&
                         
                         if (GetFileAttributesW(targetDllPath.c_str()) != INVALID_FILE_ATTRIBUTES) {
                             std::string sFileName = WStringToString(targetDllName);
-                            WriteLog("发现配置文件指向的插件: " + sFileName + "，正在配置注入...");
+                            WriteLog("[INFO] Plugin referenced by configuration file discovered: " + sFileName + ". Scheduling injection...");
 
                             if (InjectDll(hProcess, hThread, targetDllPath)) {
-                                WriteLog("插件已加入加载队列: " + sFileName);
+                                WriteLog("[INFO] Plugin queued for injection: " + sFileName);
                                 injectedCount++;
                             } else {
-                                WriteLog("错误: 插件排队失败: " + sFileName);
+                                WriteLog("[ERROR] Failed to enqueue plugin for injection: " + sFileName);
                             }
                         } else {
                             std::string sFileName = WStringToString(targetDllName);
-                            WriteLog("警告: 配置文件指向的插件文件不存在: " + sFileName);
+                            WriteLog("[WARN] Plugin file referenced by configuration file not found: " + sFileName);
                         }
                     }
                 }
@@ -191,54 +191,54 @@ void InjectPlugins(HANDLE hProcess, HANDLE hThread) {
 
     if (GetFileAttributesW(pluginsDir.c_str()) == INVALID_FILE_ATTRIBUTES) {
         CreateDirectoryW(pluginsDir.c_str(), NULL);
-        WriteLog("创建 Plugins 目录: " + WStringToString(pluginsDir));
+        WriteLog("[INFO] Plugins directory created: " + WStringToString(pluginsDir));
     }
     
     std::wstring offsetJsonPath = pluginsDir + L"\\offset.json";
     if (GetFileAttributesW(offsetJsonPath.c_str()) != INVALID_FILE_ATTRIBUTES) {
-        WriteLog("监测到历史下载文件 offset.json，正在执行移除...");
+        WriteLog("[INFO] Stale artifact from a previous download detected: offset.json. Removing...");
         if (DeleteFileW(offsetJsonPath.c_str())) {
-            WriteLog("历史文件 offset.json 移除成功");
+            WriteLog("[INFO] Stale artifact offset.json removed successfully.");
         } else {
-            WriteLog("警告: 无法移除 offset.json，错误码: " + std::to_string(GetLastError()));
+            WriteLog("[WARN] Failed to remove stale artifact offset.json. Error code: " + std::to_string(GetLastError()));
         }
     }
 
-    WriteLog("正在递归扫描插件目录寻找 config.ini: " + WStringToString(pluginsDir));
+    WriteLog("[INFO] Recursively scanning plugin directory for config.ini entries: " + WStringToString(pluginsDir));
 
     int totalInjected = 0;
     RecursiveScanAndInject(hProcess, hThread, pluginsDir, totalInjected);
 
-    WriteLog("插件加载排队完成，共计划注入: " + std::to_string(totalInjected) + " 个插件");
+    WriteLog("[INFO] Plugin scheduling phase finished. Total plugins queued for injection: " + std::to_string(totalInjected));
 }
 
 int wmain(int argc, wchar_t* argv[]) {
     std::locale::global(std::locale("zh_CN.UTF-8"));
     std::wcout.imbue(std::locale("zh_CN.UTF-8"));
 
-    WriteLog("=== 启动器会话开始 ===");
+    WriteLog("Launcher session started");
 
     if (argc < 2) {
-        std::wcerr << L"[-] 错误: 未提供游戏路径启动参数。" << std::endl;
-        std::wcerr << L"[-] 用法: Launcher.exe <GamePath> [Arguments...]" << std::endl;
-        WriteLog("错误: 未提供游戏路径启动参数，程序退出。");
+        std::wcerr << L"[ERROR] No game executable path provided as a startup argument." << std::endl;
+        std::wcerr << L"[USAGE] Launcher.exe <GamePath> [Arguments...]" << std::endl;
+        WriteLog("[ERROR] No game executable path provided as a startup argument. Launcher terminating.");
         return 1;
     }
 
     std::wstring gamePath = argv[1];
 
     if (!PathFileExistsW(gamePath.c_str())) {
-        std::wcerr << L"[-] 错误: 指定的游戏路径不存在: " << gamePath << std::endl;
-        WriteLog("错误: 指定的游戏路径不存在: " + WStringToString(gamePath));
+        std::wcerr << L"[ERROR] Specified game executable path does not exist: " << gamePath << std::endl;
+        WriteLog("[ERROR] Specified game executable path does not exist: " + WStringToString(gamePath));
         return 1;
     }
 
-    WriteLog("从启动参数获取游戏路径: " + WStringToString(gamePath));
+    WriteLog("[INFO] Game executable path retrieved from startup arguments: " + WStringToString(gamePath));
 
     HideConsole();
 
     std::wstring workingDir = gamePath.substr(0, gamePath.find_last_of(L"\\/"));
-    WriteLog("游戏工作目录: " + WStringToString(workingDir));
+    WriteLog("[INFO] Working directory for the game process: " + WStringToString(workingDir));
 
     std::wstring cmdLine = L"\"" + gamePath + L"\"";
     for (int i = 2; i < argc; ++i) {
@@ -267,14 +267,14 @@ int wmain(int argc, wchar_t* argv[]) {
         &si,
         &pi))
     {
-        WriteLog("[-] 无法创建游戏进程，错误代码: " + std::to_string(GetLastError()));
+        WriteLog("[ERROR] Failed to create the game process. Error code: " + std::to_string(GetLastError()));
         delete[] pCmdLine;
         return 1;
     }
 
     delete[] pCmdLine;
 
-    WriteLog("游戏挂起进程创建成功，开始配置插件注入队列...");
+    WriteLog("[INFO] Game process created in suspended state. Configuring plugin injection queue...");
     
     InjectPlugins(pi.hProcess, pi.hThread);
 
@@ -282,6 +282,6 @@ int wmain(int argc, wchar_t* argv[]) {
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
 
-    WriteLog("=== 游戏主线程已恢复并执行注入任务 ===");
+    WriteLog("Game main thread resumed; injection tasks dispatched");
     return 0;
 }

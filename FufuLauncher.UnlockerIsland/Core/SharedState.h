@@ -1,4 +1,4 @@
-/*
+﻿/*
 Copyright (c) FufuLauncher Dev Team. All rights reserved.
 Licensed under the AGPL-3.0 License.
 */
@@ -28,7 +28,7 @@ typedef int32_t (WINAPI *tSetFrameCount)(int32_t);
 typedef void (WINAPI *tSwitchInput)(void*);
 typedef int32_t (WINAPI *tChangeFov)(void*, float);
 typedef void (WINAPI *tSetupQuestBanner)(void*);
-typedef void (WINAPI *tShowDamage)(void*, int, int, int, float, Il2CppString*, void*, void*, int);
+typedef void (WINAPI *tShowDamage)(void*, int, int, int, float, Il2CppString*, void*, void*, int, char, float);
 typedef void (WINAPI *tCraftEntry)(void*);
 typedef bool (WINAPI *tCraftPartner)(Il2CppString*, void*, void*, void*, void*);
 typedef Il2CppString* (WINAPI *tFindString)(const char*);
@@ -50,6 +50,7 @@ typedef int (WSAAPI* tSend)(SOCKET s, const char* buf, int len, int flags);
 typedef int (WSAAPI* tSendTo)(SOCKET s, const char* buf, int len, int flags, const sockaddr* to, int tolen);
 typedef HRESULT(__stdcall* tPresent1)(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT PresentFlags, const DXGI_PRESENT_PARAMETERS* pPresentParameters);
 typedef bool (WINAPI *tGetActive)(void*);
+typedef void (WINAPI *tAvatarPaimonAppear)(void*, void*, bool);
 typedef void* (*tGetComponent)(void*, Il2CppString*);
 typedef Il2CppString* (*tGetText)(void*);
 typedef void (WINAPI *tVoidFunc)(void*);
@@ -59,7 +60,7 @@ typedef void (*FnShowDialog)(__int64, __int64, __int64, __int64, int);
 typedef void (__fastcall *tButtonClicked)(void*);
 typedef void (__fastcall *tClockPageBack)(void*, void*);
 
-typedef void (*tBuildCmdBuffers)(void*);
+typedef __int64 (__fastcall *tUpdateInnerTarget)(void*, void*, double);
 
 extern std::atomic<void*> o_GetFrameCount;
 extern std::atomic<void*> o_SetFrameCount;
@@ -89,9 +90,10 @@ extern std::atomic<void*> p_GetName;
 extern std::atomic<void*> o_send;
 extern std::atomic<void*> o_sendto;
 extern std::atomic<void*> p_GetActive;
+extern std::atomic<void*> p_AvatarPaimonAppear;
 extern std::atomic<void*> p_StringNew;
 extern std::atomic<void*> p_ShowDialog;
-extern std::atomic<void*> o_BuildCmdBuffers;
+extern std::atomic<void*> o_UpdateInnerTarget;
 
 extern std::atomic<bool> g_RequestReloadPopup;
 extern std::atomic<bool> g_GameUpdateInit;
