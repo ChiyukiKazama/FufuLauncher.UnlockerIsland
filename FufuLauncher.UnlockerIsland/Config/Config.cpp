@@ -182,6 +182,8 @@ namespace Config {
 
         g_Config.hide_profile_birthday = ReadInt("HideProfileBirthday", 0, file);
 
+        g_Config.use_system_cursor = ReadInt("UseSystemCursor", 0, file);
+
         g_Config.hide_grass = ReadInt("HideGrass", 0, file);
 
         g_Config.hide_grass_indiscriminate = ReadInt("HideGrassIndiscriminate", 0, file);
