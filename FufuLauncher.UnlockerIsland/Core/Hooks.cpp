@@ -47,6 +47,21 @@ static void TryInitTouchScreen() {
 #pragma comment(lib, "MinHook/libMinHook.x64.lib")
 #pragma comment(lib, "ws2_32.lib")
 
+using tSetCursor = HCURSOR(WINAPI*)(HCURSOR);
+static tSetCursor o_SetCursor = nullptr;
+
+static HCURSOR WINAPI hk_SetCursor(HCURSOR cursor) {
+    if (cursor && Config::Get().use_system_cursor) {
+        // IDC_ARROW resolves to the active Windows "Normal Select" cursor,
+        // including a user-selected cursor scheme; no cursor file is fixed.
+        static HCURSOR systemNormal = static_cast<HCURSOR>(LoadImageW(
+            nullptr, IDC_ARROW, IMAGE_CURSOR, 0, 0,
+            LR_SHARED | LR_DEFAULTSIZE));
+        if (systemNormal) cursor = systemNormal;
+    }
+    return o_SetCursor ? o_SetCursor(cursor) : nullptr;
+}
+
 #define HOOK_REL(name, pat, hookFn, storeOrig) \
     { \
         std::cout << "[SCAN] " << name << "..." << std::endl; \
@@ -659,6 +674,12 @@ bool Hooks::Init() {
 
     if (MH_CreateHookApi(L"ws2_32.dll", "sendto", (void*)hk_sendto, (void**)&o_sendto) == MH_OK) {
         std::cout << "[SCAN] Hook sendto Ready." << '\n';
+    }
+
+    if (MH_CreateHookApi(L"user32.dll", "SetCursor", (void*)hk_SetCursor, (void**)&o_SetCursor) == MH_OK) {
+        std::cout << "[SCAN] Hook SetCursor Ready." << '\n';
+    } else {
+        std::cout << "[SCAN] Hook SetCursor Failed." << '\n';
     }
 
     UnderwaterMask::Init();

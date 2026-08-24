@@ -73,6 +73,8 @@ struct ModConfig {
 
     bool hide_profile_birthday = false;
 
+    bool use_system_cursor = false;
+
     bool hide_grass = false;
 
     bool hide_grass_indiscriminate = false;
