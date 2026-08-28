@@ -81,6 +81,9 @@
     <ClInclude Include="il2cpp\Il2CppObject.h">
       <Filter>头文件\il2cpp</Filter>
     </ClInclude>
+    <ClInclude Include="Pause\Pause.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -120,6 +123,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="HookWndProc.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Pause\Pause.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

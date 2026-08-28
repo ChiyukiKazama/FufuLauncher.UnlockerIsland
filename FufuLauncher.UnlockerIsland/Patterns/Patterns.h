@@ -180,6 +180,7 @@ namespace Patterns {
 
 namespace GameStrings {
     inline constexpr const char* SynthesisPage = "SynthesisPage";
+    inline constexpr const char* SynthesisLayerPath = "/Canvas/Pages/SynthesisPage";
     inline constexpr const char* QuestBannerPath = "Canvas/Pages/InLevelMapPage/GrpMap/GrpPointTips/Layout/QuestBanner";
     inline constexpr const char* ProfileLayerPath = "/Canvas/Pages/PlayerProfilePage";
     inline constexpr const char* UIDPathMain = "/Canvas/Pages/PlayerProfilePage/GrpProfile/Right/GrpPlayerCard/UID";

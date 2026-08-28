@@ -22,6 +22,7 @@ Licensed under the AGPL-3.0 License.
 #include "../FreeCamera/FreeCamera.h"
 #include "../Camera/Camera.h"
 #include "../CameraOffset/CameraOffset.h"
+#include "../Pause/Pause.h"
 #include "../PaimonFollow/PaimonFollow.h"
 #include <iostream>
 #include <atomic>
@@ -51,7 +52,11 @@ using tSetCursor = HCURSOR(WINAPI*)(HCURSOR);
 static tSetCursor o_SetCursor = nullptr;
 
 static HCURSOR WINAPI hk_SetCursor(HCURSOR cursor) {
-    if (cursor && Config::Get().use_system_cursor) {
+    const bool pauseHidesCursor = Pause::IsActive() &&
+        (GetAsyncKeyState(VK_MENU) & 0x8000) == 0;
+    if (pauseHidesCursor) {
+        cursor = nullptr;
+    } else if (cursor && Config::Get().use_system_cursor) {
         // IDC_ARROW resolves to the active Windows "Normal Select" cursor,
         // including a user-selected cursor scheme; no cursor file is fixed.
         static HCURSOR systemNormal = static_cast<HCURSOR>(LoadImageW(
@@ -227,6 +232,7 @@ void WINAPI hk_ClockPageOk(void* pThis) {
 int32_t WINAPI hk_GetFrameCount() {
     UpdateTitleWatermark();
     UpdatePendingProfilePrivacyUI();
+    Pause::Update();
 
     if (g_ShouldShowDialog.load()) {
         g_ShouldShowDialog.store(false);
@@ -378,17 +384,43 @@ int32_t WINAPI hk_ChangeFov(void* __this, float value) {
 
     if (g_RequestCraft.load()) {
         g_RequestCraft.store(false);
-        if (cfg.enable_redirect_craft_override && canOpenUI) {
-            std::cout << "[Hotkey] Craft function triggered." << std::endl;
+        if (cfg.enable_redirect_craft_override && !Pause::IsActive()) {
+            const bool pauseMode = !canOpenUI;
 
             auto findStr = (tFindString)p_FindString.load();
             auto partner = (tCraftPartner)p_CraftPartner.load();
 
             if (IsValid(findStr) && IsValid(partner)) {
-                SafeInvoke([&] {
-                    Il2CppString* str = findStr(GameStrings::SynthesisPage);
-                    if (str) partner(str, nullptr, nullptr, nullptr, nullptr);
+                bool overlayPrepared = true;
+                if (pauseMode) {
+                    HWND gameWindow = GetForegroundWindow();
+                    overlayPrepared = Pause::Prepare(gameWindow);
+                }
+
+                if (!overlayPrepared) {
+                    std::cout << "[Hotkey] Pause overlay capture failed." << std::endl;
+                } else {
+                    bool invoked = false;
+                    std::cout << (pauseMode
+                        ? "[Hotkey] Transparent craft pause triggered."
+                        : "[Hotkey] Craft function triggered.") << std::endl;
+
+                    SafeInvoke([&] {
+                        Il2CppString* str = findStr(GameStrings::SynthesisPage);
+                        if (str) {
+                            partner(str, nullptr, nullptr, nullptr, nullptr);
+                            invoked = true;
+                        }
                     });
+
+                    if (pauseMode) {
+                        if (!invoked || !Pause::Activate()) {
+                            Pause::Cancel();
+                            std::cout << "[Hotkey] Pause overlay activation failed."
+                                      << std::endl;
+                        }
+                    }
+                }
             }
         }
     }
@@ -718,6 +750,7 @@ void Hooks::RequestOpenCraft() { g_RequestCraft.store(true); }
 
 void Hooks::TriggerReloadPopup() {
     NotifyProfilePrivacyConfigReload();
+    Pause::NotifyConfigReload();
     g_RequestReloadPopup.store(true);
 }
 
