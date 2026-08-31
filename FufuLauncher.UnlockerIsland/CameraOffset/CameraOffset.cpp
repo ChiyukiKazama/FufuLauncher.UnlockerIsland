@@ -8,6 +8,7 @@ Licensed under the AGPL-3.0 License.
 #include "../Config/Config.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <iostream>
 #include <Windows.h>
@@ -23,6 +24,53 @@ namespace CameraOffset {
         bool g_ShoulderBasisValid = false;
         Vector3 g_LastShoulderRight = { 1, 0, 0 };
         Vector3 g_LastShoulderBack = { 0, 0, -1 };
+        std::atomic<bool> g_ConfigReloadPending{ true };
+        bool g_RuntimeEnabled = false;
+        bool g_RuntimeStateInitialized = false;
+        int g_ToggleKey = 0;
+        bool g_ToggleKeyWasDown = false;
+
+        bool IsGameFocused() {
+            HWND foregroundWindow = GetForegroundWindow();
+            if (!foregroundWindow) return false;
+
+            DWORD foregroundProcessId = 0;
+            GetWindowThreadProcessId(foregroundWindow, &foregroundProcessId);
+            return foregroundProcessId == GetCurrentProcessId();
+        }
+
+        bool IsToggleKeyDown(int key) {
+            return key != 0 && IsGameFocused() &&
+                (GetAsyncKeyState(key) & 0x8000) != 0;
+        }
+
+        void ApplyPendingConfigReload(const ModConfig& config) {
+            if (!g_RuntimeStateInitialized ||
+                g_ConfigReloadPending.exchange(false, std::memory_order_acq_rel)) {
+                g_RuntimeEnabled = config.enable_camera_offset;
+                g_RuntimeStateInitialized = true;
+                g_ToggleKey = config.camera_offset_toggle_key;
+                g_ToggleKeyWasDown = IsToggleKeyDown(g_ToggleKey);
+            }
+        }
+
+        void UpdateRuntimeToggle(const ModConfig& config) {
+            ApplyPendingConfigReload(config);
+
+            const int toggleKey = config.camera_offset_toggle_key;
+            if (toggleKey != g_ToggleKey) {
+                g_ToggleKey = toggleKey;
+                g_ToggleKeyWasDown = IsToggleKeyDown(toggleKey);
+                return;
+            }
+
+            const bool toggleKeyDown = IsToggleKeyDown(toggleKey);
+            if (toggleKeyDown && !g_ToggleKeyWasDown) {
+                g_RuntimeEnabled = !g_RuntimeEnabled;
+                if (!g_RuntimeEnabled) SuspendImmediately();
+            }
+            g_ToggleKeyWasDown = toggleKeyDown;
+        }
 
         bool NearlyEqual(float a, float b) {
             return fabsf(a - b) <= 0.0005f;
@@ -169,9 +217,19 @@ namespace CameraOffset {
         g_LastTransitionTick = 0;
     }
 
+    bool IsRuntimeEnabled() {
+        UpdateRuntimeToggle(Config::Get());
+        return g_RuntimeEnabled;
+    }
+
+    void NotifyConfigReload() {
+        g_ConfigReloadPending.store(true, std::memory_order_release);
+    }
+
     void Tick(bool allowGameplayCameraOffset, bool cameraOwnedByAnotherFeature) {
         auto& config = Config::Get();
-        bool allowOffset = config.enable_camera_offset &&
+        UpdateRuntimeToggle(config);
+        bool allowOffset = g_RuntimeEnabled &&
             allowGameplayCameraOffset && !cameraOwnedByAnotherFeature;
 
         Vector3 targetOffset{ 0.0f, 0.0f, 0.0f };

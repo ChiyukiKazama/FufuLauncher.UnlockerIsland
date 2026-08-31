@@ -21,6 +21,8 @@ struct ModConfig {
 
     bool enable_camera_offset = false;
 
+    int camera_offset_toggle_key = VK_F6;
+
     float camera_offset_x = 0.0f;
 
     float camera_offset_z = 0.0f;

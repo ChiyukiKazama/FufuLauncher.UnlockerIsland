@@ -7,5 +7,7 @@ Licensed under the AGPL-3.0 License.
 namespace CameraOffset {
     void Init();
     void SuspendImmediately();
+    bool IsRuntimeEnabled();
+    void NotifyConfigReload();
     void Tick(bool allowGameplayCameraOffset, bool cameraOwnedByAnotherFeature);
 }

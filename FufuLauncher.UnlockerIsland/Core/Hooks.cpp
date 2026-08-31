@@ -435,7 +435,8 @@ int32_t WINAPI hk_ChangeFov(void* __this, float value) {
 
     auto orig = (tChangeFov)o_ChangeFov.load();
     int32_t ret = orig ? orig(__this, value) : 0;
-    bool dialogueOrCutsceneActive = cfg.enable_camera_offset ? IsDialogueOrCutsceneActive() : false;
+    bool dialogueOrCutsceneActive = CameraOffset::IsRuntimeEnabled() ?
+        IsDialogueOrCutsceneActive() : false;
     Camera::Tick();
     bool freeCameraActive = FreeCamera::IsActive();
     if (freeCameraActive) {
@@ -718,6 +719,7 @@ void Hooks::RequestOpenCraft() { g_RequestCraft.store(true); }
 
 void Hooks::TriggerReloadPopup() {
     NotifyProfilePrivacyConfigReload();
+    CameraOffset::NotifyConfigReload();
     g_RequestReloadPopup.store(true);
 }
 
