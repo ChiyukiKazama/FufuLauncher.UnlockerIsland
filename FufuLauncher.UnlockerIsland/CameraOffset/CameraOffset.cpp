@@ -49,7 +49,7 @@ namespace CameraOffset {
                 g_ConfigReloadPending.exchange(false, std::memory_order_acq_rel)) {
                 g_RuntimeEnabled = config.enable_camera_offset;
                 g_RuntimeStateInitialized = true;
-                g_ToggleKey = config.camera_offset_toggle_key;
+                g_ToggleKey = config.camera_offset_key;
                 g_ToggleKeyWasDown = IsToggleKeyDown(g_ToggleKey);
             }
         }
@@ -57,7 +57,7 @@ namespace CameraOffset {
         void UpdateRuntimeToggle(const ModConfig& config) {
             ApplyPendingConfigReload(config);
 
-            const int toggleKey = config.camera_offset_toggle_key;
+            const int toggleKey = config.camera_offset_key;
             if (toggleKey != g_ToggleKey) {
                 g_ToggleKey = toggleKey;
                 g_ToggleKeyWasDown = IsToggleKeyDown(toggleKey);
