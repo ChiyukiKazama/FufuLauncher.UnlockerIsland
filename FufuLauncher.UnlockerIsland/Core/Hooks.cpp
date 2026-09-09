@@ -350,6 +350,16 @@ int32_t WINAPI hk_ChangeFov(void* __this, float value) {
     bool canOpenUI = CheckCanUseShortcut();
     bool isFocused = CheckWindowFocused(GetForegroundWindow());
 
+    static const int cameraOffsetKey = cfg.camera_offset_key;
+    static bool previousCameraOffsetToggle = false;
+    bool cameraOffsetToggle = cameraOffsetKey != 0 &&
+        (GetAsyncKeyState(cameraOffsetKey) & 0x8000) != 0;
+    if (cameraOffsetToggle && !previousCameraOffsetToggle) {
+        cfg.enable_camera_offset = !cfg.enable_camera_offset;
+        if (!cfg.enable_camera_offset) CameraOffset::SuspendImmediately();
+    }
+    previousCameraOffsetToggle = cameraOffsetToggle;
+
     if (g_RequestCraft.load()) {
         g_RequestCraft.store(false);
         if (cfg.enable_redirect_craft_override && canOpenUI) {
