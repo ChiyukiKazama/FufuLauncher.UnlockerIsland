@@ -126,8 +126,6 @@ static uintptr_t ResolveAddress(uintptr_t addr) {
 }
 
 static std::atomic<uint32_t> g_ResinListOffset{ 0 };
-static std::atomic<void*> g_AddResinChoice{ nullptr };
-using tAddResinChoice = void (WINAPI*)(Il2CppList<uint64_t>*, uint64_t);
 
 static bool MatchesResinChoice(uint64_t item, uint32_t id) {
     return static_cast<uint32_t>(item) == id ||
@@ -136,13 +134,13 @@ static bool MatchesResinChoice(uint64_t item, uint32_t id) {
 
 static void ApplyResinChoices(void* pThis) {
     const auto& cfg = Config::Get();
-    struct Choice { uint32_t id; uint64_t value; bool enabled; };
+    struct Choice { uint32_t id; bool enabled; };
     const Choice choices[] = {
-        { 106,    0x000000010000006AULL, cfg.use_resin_000106 },
-        { 220007, 0x0000000200035B67ULL, cfg.use_resin_220007 },
-        { 107012, 0x000000070001A204ULL, cfg.use_resin_107012 },
-        { 107009, 0x000000060001A201ULL, cfg.use_resin_107009 },
-        { 201,    0x00000008000000C9ULL, cfg.use_resin_000201 }
+        { 106,    cfg.use_resin_000106 },
+        { 220007, cfg.use_resin_220007 },
+        { 107012, cfg.use_resin_107012 },
+        { 107009, cfg.use_resin_107009 },
+        { 201,    cfg.use_resin_000201 }
     };
 
     const uint32_t offset = g_ResinListOffset.load();
@@ -170,6 +168,8 @@ static void ApplyResinChoices(void* pThis) {
             IsBadWritePtr(values, count * sizeof(uint64_t))) return;
     }
 
+    // The game decides which choices are available for the current resources
+    // and reward. Toggles may hide those choices, but must not add missing ones.
     for (int i = count - 1; i >= 0; --i) {
         const uint64_t item = list->Get(i);
         for (const Choice& choice : choices) {
@@ -177,23 +177,6 @@ static void ApplyResinChoices(void* pThis) {
                 list->RemoveAt(i);
                 break;
             }
-        }
-    }
-
-    auto add = reinterpret_cast<tAddResinChoice>(g_AddResinChoice.load());
-    if (!add) return;
-    for (const Choice& choice : choices) {
-        if (!choice.enabled) continue;
-        bool present = false;
-        for (int i = 0; i < list->Count(); ++i) {
-            if (MatchesResinChoice(list->Get(i), choice.id)) {
-                present = true;
-                break;
-            }
-        }
-        if (!present && list->Count() < 32) {
-            list->IncrementVersion();
-            add(list, choice.value);
         }
     }
 }
@@ -654,7 +637,7 @@ bool Hooks::Init() {
         std::cout << "[SCAN] SetupResinList..." << std::endl;
         void* call = Scanner::ScanMainMod(Patterns::SetupResinList);
         void* target = call ? Scanner::ResolveRelative(call, 1, 5) : nullptr;
-        if (target && !IsBadReadPtr(target, 0xEA)) {
+        if (target && !IsBadReadPtr(target, 0x2E)) {
             const auto* code = static_cast<const uint8_t*>(target);
             const uint8_t prologue[] = { 0x56, 0x57, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x89, 0xCB };
             const uint8_t listRead[] = { 0x48, 0x8B, 0x8B };
@@ -667,23 +650,14 @@ bool Hooks::Init() {
                 uint32_t listOffset = 0;
                 memcpy(&listOffset, code + 0x1A, sizeof(listOffset));
                 if (listOffset >= 0x20 && listOffset <= 0x1000 && listOffset % 8 == 0) {
-                    void* add = code[0xE5] == 0xE8
-                        ? Scanner::ResolveRelative((void*)(code + 0xE5), 1, 5) : nullptr;
-                    const uint8_t addPrologue[] = { 0x41, 0x56, 0x56, 0x57, 0x55,
-                                                     0x53, 0x48, 0x83, 0xEC, 0x20 };
-                    if (add && !IsBadReadPtr(add, sizeof(addPrologue)) &&
-                        memcmp(add, addPrologue, sizeof(addPrologue)) == 0) {
-                        g_ResinListOffset.store(listOffset);
-                        g_AddResinChoice.store(add);
-                        LogOffset("SetupResinList", target, call);
-                        if (MH_CreateHook(target, (void*)hk_SetupResinList, (void**)&o_SetupResinList) == MH_OK) {
-                            std::cout << "   -> Hook Ready; list field: 0x" << std::hex
-                                      << listOffset << std::dec << std::endl;
-                        } else {
-                            g_ResinListOffset.store(0);
-                            g_AddResinChoice.store(nullptr);
-                            std::cout << "   -> [ERR] MH_CreateHook Failed." << std::endl;
-                        }
+                    g_ResinListOffset.store(listOffset);
+                    LogOffset("SetupResinList", target, call);
+                    if (MH_CreateHook(target, (void*)hk_SetupResinList, (void**)&o_SetupResinList) == MH_OK) {
+                        std::cout << "   -> Hook Ready; list field: 0x" << std::hex
+                                  << listOffset << std::dec << std::endl;
+                    } else {
+                        g_ResinListOffset.store(0);
+                        std::cout << "   -> [ERR] MH_CreateHook Failed." << std::endl;
                     }
                 }
             }
