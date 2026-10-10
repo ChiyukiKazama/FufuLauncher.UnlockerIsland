@@ -69,7 +69,7 @@ namespace CameraDistance {
                         saved.values[i] > 100.0f) return false;
                 }
                 saved.config = global;
-                const float maximum = (std::max)(6.0f, (std::min)(20.0f, cfg.camera_max_distance));
+                const float maximum = (std::max)(6.0f, cfg.camera_max_distance);
                 for (size_t i = 0; i < kLimitCount; ++i) {
                     *reinterpret_cast<float*>(global + kMaxOffsets[i]) = maximum;
                     saved.written = i + 1;
