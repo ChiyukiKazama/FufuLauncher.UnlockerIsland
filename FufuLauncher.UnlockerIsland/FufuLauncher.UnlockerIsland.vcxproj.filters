@@ -21,6 +21,9 @@
     <ClInclude Include="Utils.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="SkillCooldown\SkillCooldown.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Config.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -138,6 +141,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="HookWndProc.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="SkillCooldown\SkillCooldown.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

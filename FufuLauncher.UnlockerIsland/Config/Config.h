@@ -42,6 +42,10 @@ struct ModConfig
 
     bool hide_uid = false;
 
+    bool display_skill_cd = false;
+    bool no_skill_cd = false;
+    bool no_sprint_cd = false;
+
     bool use_resin_000106 = true;
     bool use_resin_000201 = true;
     bool use_resin_107009 = true;

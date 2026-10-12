@@ -1,0 +1,14 @@
+[DisplaySkillCD]
+Name = 显示全队CD
+Type = bool
+Value = 1
+
+[NoSkillCD]
+Name = 关闭技能CD
+Type = bool
+Value = 0
+
+[NoSprintCD]
+Name = 关闭冲刺CD
+Type = bool
+Value = 1

@@ -143,6 +143,7 @@
     </ItemDefinitionGroup>
     <ItemGroup>
         <ClInclude Include="Config\Config.h"/>
+        <ClInclude Include="SkillCooldown\SkillCooldown.h"/>
         <ClInclude Include="Core\Hooks.h"/>
         <ClInclude Include="Core\SharedState.h"/>
         <ClInclude Include="Patterns\Patterns.h"/>
@@ -182,6 +183,7 @@
         <ClCompile Include="CameraOffset\CameraOffset.cpp"/>
         <ClCompile Include="CameraTweaks\CameraTweaks.cpp"/>
         <ClCompile Include="CameraDistance\CameraDistance.cpp"/>
+        <ClCompile Include="SkillCooldown\SkillCooldown.cpp"/>
         <ClCompile Include="CameraCollision\CameraCollision.cpp"/>
         <ClCompile Include="PaimonFollow\PaimonFollow.cpp"/>
     </ItemGroup>

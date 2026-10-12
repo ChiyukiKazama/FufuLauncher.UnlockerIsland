@@ -185,6 +185,10 @@ namespace Config
 
         g_Config.hide_uid = ReadInt("HideUID", 0, file);
 
+        g_Config.display_skill_cd = ReadInt("DisplaySkillCD", 0, file) != 0;
+        g_Config.no_skill_cd = ReadInt("NoSkillCD", 0, file) != 0;
+        g_Config.no_sprint_cd = ReadInt("NoSprintCD", 0, file) != 0;
+
         g_Config.use_resin_000106 = ReadInt("ResinItem000106", 1, file);
         g_Config.use_resin_000201 = ReadInt("ResinItem000201", 1, file);
         g_Config.use_resin_107009 = ReadInt("ResinItem107009", 1, file);
