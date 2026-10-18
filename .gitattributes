@@ -1,0 +1,7 @@
+# Normalize line endings to LF in the repository.
+# Diff then ignores CRLF vs LF differences.
+* text=auto
+
+# Working tree stays CRLF to match .editorconfig
+*.cs text eol=crlf
+*.vb text eol=crlf
