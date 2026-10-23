@@ -21,6 +21,15 @@
     <ClInclude Include="Utils.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Config\ShortcutSettings.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Automation\Shortcuts.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Automation\ClaimLogic.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="SkillCooldown\SkillCooldown.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -144,6 +153,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="SkillCooldown\SkillCooldown.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Automation\Shortcuts.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

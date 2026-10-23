@@ -12,3 +12,24 @@ Value = 0
 Name = 关闭冲刺CD
 Type = bool
 Value = 1
+
+[QuickClaim]
+Name = 快捷领取每日委托
+Type = bool
+Value = 0
+
+[AutoForge]
+Name = 快捷打开锻造界面
+Type = bool
+Value = 0
+
+[ClaimAllKey]
+Name = 每日委托领取快捷键
+Description = 默认 F8；两阶段请求间隔至少 600 毫秒，按住不会重复触发
+Type = key
+Value = 119
+
+[AutoForgeKey]
+Name = 打开锻造界面快捷键
+Type = key
+Value = 118

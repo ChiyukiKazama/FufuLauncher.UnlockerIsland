@@ -14,6 +14,7 @@ Licensed under the AGPL-3.0 License.
 #include "SharedState.h"
 #include "../Patterns/Patterns.h"
 #include "../Automation/Automation.h"
+#include "../Automation/Shortcuts.h"
 #include "../RainbowDamage/RainbowDamage.h"
 #include "../HideUI/HideUI.h"
 #include "../Visual/Visual.h"
@@ -536,6 +537,8 @@ int32_t WINAPI hk_ChangeFov(void* __this, float value)
     bool canOpenUI = CheckCanUseShortcut();
     bool isFocused = CheckWindowFocused(GetForegroundWindow());
 
+    Shortcuts::Tick(isFocused);
+
     if (g_RequestCraft.load())
     {
         g_RequestCraft.store(false);
@@ -960,6 +963,7 @@ bool Hooks::Init()
     CameraDistance::Init();
     CameraCollision::Init();
     SkillCooldown::Init(isOS);
+    Shortcuts::Initialize(isOS);
 
     PaimonFollow::Init();
 

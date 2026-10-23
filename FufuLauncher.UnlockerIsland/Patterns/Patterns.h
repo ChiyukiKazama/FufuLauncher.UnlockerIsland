@@ -8,6 +8,22 @@ Licensed under the AGPL-3.0 License.
 
 namespace Patterns
 {
+    namespace CommissionCN71
+    {
+        // Same CN executable and request ABI as DetachedPlugins/ConvenienceTools.
+        inline constexpr uint32_t Timestamp = 1788945104;
+        inline constexpr uint32_t ImageSize = 0x1B0AD000;
+        inline constexpr uintptr_t RootSlot = 0x05783DE8;
+        inline constexpr uintptr_t ClientOffset = 0xA080;
+        inline constexpr uintptr_t RequiredPointer = 0xC0;
+        inline constexpr uintptr_t ReadyByte = 0xF1;
+        inline constexpr uintptr_t AllocateRva = 0x118834D0;
+        inline constexpr uintptr_t SendRva = 0x0724A3B0;
+        inline constexpr uintptr_t FirstType = 0x057CF260;
+        inline constexpr uintptr_t SecondType = 0x057B4FF8;
+        inline constexpr const char* AllocatePrologue = "56 57 53 48 83 EC 30 48 89 CF 83 3D C3 2A F0 F3";
+        inline constexpr const char* SendPrologue = "56 57 53 48 83 EC 20 44 89 C3 48 89 D7 48 89 CE";
+    }
     namespace SkillCooldownCN71
     {
         // Matched cn71.exe / cn71.i64. Validate the image and every entry before
@@ -307,6 +323,7 @@ namespace Patterns
 namespace GameStrings
 {
     inline constexpr const char* SynthesisPage = "SynthesisPage";
+    inline constexpr const char* ForgingPage = "ForgingPage";
     inline constexpr const char* QuestBannerPath = "Canvas/Pages/InLevelMapPage/GrpMap/GrpPointTips/Layout/QuestBanner";
     inline constexpr const char* ProfileLayerPath = "/Canvas/Pages/PlayerProfilePage";
     inline constexpr const char* UIDPathMain = "/Canvas/Pages/PlayerProfilePage/GrpProfile/Right/GrpPlayerCard/UID";

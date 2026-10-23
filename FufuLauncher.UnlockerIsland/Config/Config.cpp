@@ -3,6 +3,7 @@ Copyright (c) FufuLauncher Dev Team. All rights reserved.
 Licensed under the AGPL-3.0 License.
 */
 #include "Config.h"
+#include "ShortcutSettings.h"
 #include <string>
 #include <cstdio>
 #include <cstdlib>
@@ -112,6 +113,9 @@ namespace Config
 
         std::string cfgPath = dirPath + "\\config.ini";
         LPCSTR file = cfgPath.c_str();
+
+        static bool shortcutsAdded = false;
+        if (!shortcutsAdded) shortcutsAdded = EnsureShortcutSettings(file);
 
         g_Config.debug_console = ReadInt("DebugConsole", 0, file);
 
@@ -237,9 +241,13 @@ namespace Config
 
         g_Config.enable_auto_cook = ReadInt("AutoCook", 0, file);
         g_Config.enable_auto_expedition = ReadInt("AutoExpedition", 0, file);
+        g_Config.enable_quick_claim = ReadInt("QuickClaim", 0, file);
+        g_Config.enable_auto_forge = ReadInt("AutoForge", 0, file);
 
         g_Config.auto_cook_key = ReadInt("AutoCookKey", VK_F10, file);
         g_Config.auto_expedition_key = ReadInt("AutoExpeditionKey", VK_F9, file);
+        g_Config.claim_all_key = ReadInt("ClaimAllKey", VK_F8, file);
+        g_Config.auto_forge_key = ReadInt("AutoForgeKey", VK_F7, file);
 
         g_Config.enable_rainbow_damage = ReadInt("EnableRainbowDamage", 0, file);
         g_Config.rainbow_damage_mode = ReadInt("RainbowDamageMode", 0, file);

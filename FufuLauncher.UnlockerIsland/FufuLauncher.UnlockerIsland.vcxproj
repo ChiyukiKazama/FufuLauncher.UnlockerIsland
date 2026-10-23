@@ -143,6 +143,9 @@
     </ItemDefinitionGroup>
     <ItemGroup>
         <ClInclude Include="Config\Config.h"/>
+        <ClInclude Include="Config\ShortcutSettings.h"/>
+        <ClInclude Include="Automation\Shortcuts.h"/>
+        <ClInclude Include="Automation\ClaimLogic.h"/>
         <ClInclude Include="SkillCooldown\SkillCooldown.h"/>
         <ClInclude Include="Core\Hooks.h"/>
         <ClInclude Include="Core\SharedState.h"/>
@@ -174,6 +177,7 @@
         <ClCompile Include="Core\SharedState.cpp"/>
         <ClCompile Include="Patterns\Patterns.cpp"/>
         <ClCompile Include="Automation\Automation.cpp"/>
+        <ClCompile Include="Automation\Shortcuts.cpp"/>
         <ClCompile Include="RainbowDamage\RainbowDamage.cpp"/>
         <ClCompile Include="HideUI\HideUI.cpp"/>
         <ClCompile Include="UnderwaterMask\UnderwaterMask.cpp"/>

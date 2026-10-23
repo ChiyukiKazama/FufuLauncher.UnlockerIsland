@@ -92,9 +92,13 @@ struct ModConfig
 
     bool enable_auto_cook = false;
     bool enable_auto_expedition = false;
+    bool enable_quick_claim = false;
+    bool enable_auto_forge = false;
 
     int auto_cook_key = VK_F10;
     int auto_expedition_key = VK_F9;
+    int claim_all_key = VK_F8;
+    int auto_forge_key = VK_F7;
 
     bool enable_rainbow_damage = false;
     int rainbow_damage_mode = 0;
