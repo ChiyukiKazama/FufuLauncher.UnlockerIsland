@@ -469,7 +469,7 @@ static std::atomic<bool> g_IsAimingCamera{false};
 static void UpdateCameraFeatures()
 {
     auto& cfg = Config::Get();
-    static const int cameraOffsetKey = cfg.camera_offset_key;
+    const int cameraOffsetKey = cfg.camera_offset_key;
     static bool previousCameraOffsetToggle = false;
     static bool previousFreeCameraActive = false;
     bool cameraOffsetToggle = cameraOffsetKey != 0 &&
