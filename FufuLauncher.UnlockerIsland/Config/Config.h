@@ -114,6 +114,7 @@ struct ModConfig
 namespace Config
 {
     ModConfig& Get();
+    unsigned int GetResinChoiceMask();
     void Load();
     void SaveOverlayPos(float x, float y);
 

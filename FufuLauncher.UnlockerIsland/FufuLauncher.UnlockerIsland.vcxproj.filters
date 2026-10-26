@@ -21,6 +21,9 @@
     <ClInclude Include="Utils.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="ResinChoices\ResinChoices.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="Config.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -135,6 +138,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="GamepadHotSwitch.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="ResinChoices\ResinChoices.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="HookWndProc.cpp">

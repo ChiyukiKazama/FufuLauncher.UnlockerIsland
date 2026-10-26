@@ -3,6 +3,7 @@ Copyright (c) FufuLauncher Dev Team. All rights reserved.
 Licensed under the AGPL-3.0 License.
 */
 #include "Config.h"
+#include "../ResinChoices/ResinChoices.h"
 #include <string>
 #include <cstdio>
 #include <cstdlib>
@@ -10,6 +11,7 @@ Licensed under the AGPL-3.0 License.
 #include <vector>
 #include <Windows.h>
 #include <iostream>
+#include <atomic>
 
 ModConfig g_Config;
 
@@ -32,7 +34,14 @@ std::string AnsiToUtf8(const std::string& str)
 
 namespace Config
 {
+    static std::atomic<unsigned int> g_ResinChoiceMask{31};
+
     ModConfig& Get() { return g_Config; }
+
+    unsigned int GetResinChoiceMask()
+    {
+        return g_ResinChoiceMask.load(std::memory_order_acquire);
+    }
 
     int ReadInt(LPCSTR section, int defaultVal, LPCSTR file)
     {
@@ -190,6 +199,15 @@ namespace Config
         g_Config.use_resin_107009 = ReadInt("ResinItem107009", 1, file);
         g_Config.use_resin_107012 = ReadInt("ResinItem107012", 1, file);
         g_Config.use_resin_220007 = ReadInt("ResinItem220007", 1, file);
+        // Publish all five flags together, then post a UI-thread change event.
+        const unsigned int choices =
+            (g_Config.use_resin_000106 ? 1u : 0u) |
+            (g_Config.use_resin_220007 ? 2u : 0u) |
+            (g_Config.use_resin_107012 ? 4u : 0u) |
+            (g_Config.use_resin_107009 ? 8u : 0u) |
+            (g_Config.use_resin_000201 ? 16u : 0u);
+        if (g_ResinChoiceMask.exchange(choices, std::memory_order_acq_rel) != choices)
+            ResinChoices::ChoicesChanged();
 
         g_Config.disable_show_damage_text = ReadInt("DisableDamageText", 0, file);
 
