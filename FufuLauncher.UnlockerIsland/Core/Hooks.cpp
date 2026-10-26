@@ -25,6 +25,7 @@ Licensed under the AGPL-3.0 License.
 #include "../CameraDistance/CameraDistance.h"
 #include "../CameraCollision/CameraCollision.h"
 #include "../PaimonFollow/PaimonFollow.h"
+#include "../SkillCooldown/SkillCooldown.h"
 #include <iostream>
 #include <atomic>
 #include <mutex>
@@ -958,6 +959,7 @@ bool Hooks::Init()
     CameraTweaks::Init();
     CameraDistance::Init();
     CameraCollision::Init();
+    SkillCooldown::Init(isOS);
 
     PaimonFollow::Init();
 

@@ -143,6 +143,7 @@
     </ItemDefinitionGroup>
     <ItemGroup>
         <ClInclude Include="Config\Config.h"/>
+        <ClInclude Include="SkillCooldown\SkillCooldown.h"/>
         <ClInclude Include="Core\Hooks.h"/>
         <ClInclude Include="Core\SharedState.h"/>
         <ClInclude Include="Patterns\Patterns.h"/>
@@ -167,6 +168,7 @@
     </ItemGroup>
     <ItemGroup>
         <ClCompile Include="Config\Config.cpp"/>
+        <ClCompile Include="SkillCooldown\SkillCooldown.cpp"/>
         <ClCompile Include="Core\dllmain.cpp"/>
         <ClCompile Include="Core\Hooks.cpp"/>
         <ClCompile Include="Scanner\Scanner.cpp"/>
