@@ -25,6 +25,7 @@ Licensed under the AGPL-3.0 License.
 #include "../CameraDistance/CameraDistance.h"
 #include "../CameraCollision/CameraCollision.h"
 #include "../PaimonFollow/PaimonFollow.h"
+#include "../ResinChoices/ResinChoices.h"
 #include <iostream>
 #include <atomic>
 #include <mutex>
@@ -36,7 +37,6 @@ Licensed under the AGPL-3.0 License.
 #include <algorithm>
 #include <fstream>
 #include <sstream>
-#include "../il2cpp/Il2CppList.h"
 
 #pragma comment(lib, "d3d11.lib")
 
@@ -133,86 +133,6 @@ static uintptr_t ResolveAddress(uintptr_t addr)
         return addr + 5 + offset;
     }
     return addr;
-}
-
-static std::atomic<uint32_t> g_ResinListOffset{0};
-
-static bool MatchesResinChoice(uint64_t item, uint32_t id)
-{
-    return static_cast<uint32_t>(item) == id ||
-        static_cast<uint32_t>(item >> 32) == id;
-}
-
-static void ApplyResinChoices(void* pThis)
-{
-    const auto& cfg = Config::Get();
-    struct Choice
-    {
-        uint32_t id;
-        bool enabled;
-    };
-    const Choice choices[] = {
-        {106, cfg.use_resin_000106},
-        {220007, cfg.use_resin_220007},
-        {107012, cfg.use_resin_107012},
-        {107009, cfg.use_resin_107009},
-        {201, cfg.use_resin_000201}
-    };
-
-    const uint32_t offset = g_ResinListOffset.load();
-    if (!pThis || !offset) return;
-
-    auto** listPtr = reinterpret_cast<Il2CppList<uint64_t>**>(
-        static_cast<uint8_t*>(pThis) + offset);
-    if (IsBadReadPtr(listPtr, sizeof(*listPtr))) return;
-
-    auto* list = *listPtr;
-    if (!list || IsBadReadPtr(list, sizeof(*list)) ||
-        IsBadWritePtr(list, sizeof(*list)))
-        return;
-
-    const int count = list->Count();
-    if (count < 0 || count > 32) return;
-
-    auto* items = list->Items();
-    if (!items || IsBadReadPtr(items, 0x20)) return;
-    const auto capacity = items->Count();
-    if (capacity < static_cast<size_t>(count) || capacity > 1000) return;
-
-    if (count)
-    {
-        auto* values = reinterpret_cast<uint8_t*>(items) + 0x20;
-        if (IsBadReadPtr(values, count * sizeof(uint64_t)) ||
-            IsBadWritePtr(values, count * sizeof(uint64_t)))
-            return;
-    }
-    
-    for (int i = count - 1; i >= 0; --i)
-    {
-        const uint64_t item = list->Get(i);
-        for (const Choice& choice : choices)
-        {
-            if (MatchesResinChoice(item, choice.id) && !choice.enabled)
-            {
-                list->RemoveAt(i);
-                break;
-            }
-        }
-    }
-}
-
-static void WINAPI hk_SetupResinList(void* pThis)
-{
-    auto original = reinterpret_cast<tSetupResinList>(o_SetupResinList.load());
-    if (!original) return;
-    original(pThis);
-    __try
-    {
-        ApplyResinChoices(pThis);
-    }
-    __except (EXCEPTION_EXECUTE_HANDLER)
-    {
-    }
 }
 
 static __int64 __fastcall hk_UpdateInnerTarget(void* pThis, void* a2, double a3)
@@ -741,44 +661,7 @@ bool Hooks::Init()
     HOOK_REL("PlayerPerspective", Patterns::PlayerPerspective, hk_PlayerPerspective, o_PlayerPerspective);
     SCAN_REL("SetSyncCount", Patterns::SetSyncCount, o_SetSyncCount);
     SCAN_DIR("CheckCanOpenMap", Patterns::CheckCanOpenMap, p_CheckCanOpenMap);
-    {
-        std::cout << "[SCAN] SetupResinList..." << std::endl;
-        void* call = Scanner::ScanMainMod(Patterns::SetupResinList);
-        void* target = call ? Scanner::ResolveRelative(call, 1, 5) : nullptr;
-        if (target && !IsBadReadPtr(target, 0x2E))
-        {
-            const auto* code = static_cast<const uint8_t*>(target);
-            const uint8_t prologue[] = {0x56, 0x57, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x89, 0xCB};
-            const uint8_t listRead[] = {0x48, 0x8B, 0x8B};
-            const uint8_t listCheck[] = {0x48, 0x85, 0xC9, 0x0F, 0x84};
-            const uint8_t sizeReset[] = {0xC7, 0x41, 0x18, 0, 0, 0, 0};
-            if (memcmp(code, prologue, sizeof(prologue)) == 0 &&
-                memcmp(code + 0x17, listRead, sizeof(listRead)) == 0 &&
-                memcmp(code + 0x1E, listCheck, sizeof(listCheck)) == 0 &&
-                memcmp(code + 0x27, sizeReset, sizeof(sizeReset)) == 0)
-            {
-                uint32_t listOffset = 0;
-                memcpy(&listOffset, code + 0x1A, sizeof(listOffset));
-                if (listOffset >= 0x20 && listOffset <= 0x1000 && listOffset % 8 == 0)
-                {
-                    g_ResinListOffset.store(listOffset);
-                    LogOffset("SetupResinList", target, call);
-                    if (MH_CreateHook(target, (void*)hk_SetupResinList, (void**)&o_SetupResinList) == MH_OK)
-                    {
-                        std::cout << "   -> Hook Ready; list field: 0x" << std::hex
-                            << listOffset << std::dec << std::endl;
-                    }
-                    else
-                    {
-                        g_ResinListOffset.store(0);
-                        std::cout << "   -> [ERR] MH_CreateHook Failed." << std::endl;
-                    }
-                }
-            }
-        }
-        if (!g_ResinListOffset.load())
-            std::cout << "   -> [WARN] Signature or list layout unsupported; choices unchanged." << std::endl;
-    }
+    ResinChoices::Init();
     SCAN_DIR("StringNew", Patterns::StringNew, p_StringNew);
     SCAN_DIR("ShowDialog", Patterns::ShowDialog, p_ShowDialog);
     SCAN_DIR("AvatarPaimonAppear", Patterns::AvatarPaimonAppear, p_AvatarPaimonAppear);
