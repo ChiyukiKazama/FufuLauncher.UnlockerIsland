@@ -13,7 +13,6 @@ Licensed under the AGPL-3.0 License.
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-#include <fstream>
 #include <iostream>
 #include <mutex>
 #include <unordered_map>
@@ -82,7 +81,6 @@ namespace SkillCooldown
         std::array<void*, 33> g_ChargeSources{};
         uintptr_t g_Base = 0, g_End = 0;
         std::atomic<bool> g_UIFault{false};
-        std::string g_TracePath;
 
         struct TextView
         {
@@ -91,24 +89,18 @@ namespace SkillCooldown
         };
         struct ChargeView
         {
-            enum class Stage { Idle, WaitingSource, MissingPanel, UnsupportedCount, MissingCircle,
-                               CloneFailed, MissingMetadata, MissingDiamond, InvalidBounds, Shown, NativeFault };
             void* transform = nullptr;
             std::vector<void*> images;
             Color enabled{}, disabled{};
             int maximum = 0;
-            Stage stage = Stage::Idle;
         };
         struct Row
         {
             uint64_t guid = 0;
-            int slot = -1;
             TextView e, q;
             ChargeView charges;
             void* hiddenImage = nullptr;
             bool imageWasEnabled = false;
-            unsigned traced = 0;
-            unsigned chargeTraced = 0;
         };
         struct Skill
         {
@@ -394,18 +386,6 @@ namespace SkillCooldown
             }
         }
 
-        void ObserveChargeSource(void* source, int maximum)
-        {
-            RememberChargeSource(source);
-            static std::array<bool, 33> reported{};
-            if (maximum < 0 || maximum > 32 || reported[maximum] || g_TracePath.empty()) return;
-            reported[maximum] = true;
-            std::ofstream log(g_TracePath, std::ios::app);
-            if (log) log << "[DisplaySkillCD] native-source maximum=" << maximum
-                         << " ready2=" << Alive(g_ChargeSources[2])
-                         << " ready3=" << Alive(g_ChargeSources[3]) << '\n';
-        }
-
         bool DiamondBounds(const ChargeView& view, void* parent, Rect& bounds)
         {
             if (view.images.empty()) return false;
@@ -426,33 +406,27 @@ namespace SkillCooldown
             return bounds.width > 0 && bounds.height > 0;
         }
 
-        bool ChargeFailure(ChargeView& view, ChargeView::Stage stage)
-        {
-            view.stage = stage;
-            return false;
-        }
-
         bool CreateCharges(ChargeView& view, void* parent, int maximum)
         {
             if (Alive(view.transform) && view.maximum == maximum) return true;
             RemoveCharges(view);
             if (maximum < 2 || maximum > 32 || !Alive(parent))
-                return ChargeFailure(view, ChargeView::Stage::UnsupportedCount);
+                return false;
             void* button = g_ChargeSources[maximum];
-            if (!Alive(button)) return ChargeFailure(view, ChargeView::Stage::WaitingSource);
+            if (!Alive(button)) return false;
             void* panel = Read<void*>(button, 0xD8); // MonoBaseSkillBtn.EGHGGFHBNPN
-            if (!Alive(panel)) return ChargeFailure(view, ChargeView::Stage::MissingPanel);
+            if (!Alive(panel)) return false;
             // Native OKLIFOLHAMN selects skillPointPanels[maximum - 2]. Each
             // entry contains the original diamond sprites and their layout.
             void* group = ListEntry(Read<void*>(panel, 0x18), maximum - 2);
-            if (!Alive(group)) return ChargeFailure(view, ChargeView::Stage::UnsupportedCount);
+            if (!Alive(group)) return false;
             void* source = g_ObjectTransform(group, nullptr);
             Rect circleBounds{};
-            if (!ChargeCircle(button, circleBounds)) return ChargeFailure(view, ChargeView::Stage::MissingCircle);
+            if (!ChargeCircle(button, circleBounds)) return false;
             view.enabled = Read<Color>(panel, 0x20);
             view.disabled = Read<Color>(panel, 0x30);
             view.transform = g_Clone(source, parent, false, nullptr);
-            if (!Alive(view.transform)) { view = {}; return ChargeFailure(view, ChargeView::Stage::CloneFailed); }
+            if (!Alive(view.transform)) { view = {}; return false; }
             HideCharges(view);
             const Vec3 scale{1, 1, 1};
             g_SetScale(view.transform, &scale, nullptr);
@@ -462,17 +436,17 @@ namespace SkillCooldown
             void* imageType = Read<void*>(reinterpret_cast<void*>(g_Base), Native::ChargeImageType);
             auto stringNew = reinterpret_cast<FnStringNew>(p_StringNew.load());
             if (!prefix || !imageType || !stringNew)
-            { RemoveCharges(view); return ChargeFailure(view, ChargeView::Stage::MissingMetadata); }
+            { RemoveCharges(view); return false; }
             for (int i = 0; i < maximum; ++i)
             {
                 char number[16]{};
                 _snprintf_s(number, sizeof(number), _TRUNCATE, "%d", i + 1);
                 void* suffix = reinterpret_cast<void*>(stringNew(number));
-                if (!suffix) { RemoveCharges(view); return ChargeFailure(view, ChargeView::Stage::MissingMetadata); }
+                if (!suffix) { RemoveCharges(view); return false; }
                 void* name = g_Concat(prefix, suffix, nullptr);
                 void* child = name ? g_FindTransform(view.transform, name, nullptr) : nullptr;
                 void* image = Alive(child) ? g_ComponentByType(child, imageType) : nullptr;
-                if (!Alive(image)) { RemoveCharges(view); return ChargeFailure(view, ChargeView::Stage::MissingDiamond); }
+                if (!Alive(image)) { RemoveCharges(view); return false; }
                 g_SetRaycast(image, false, nullptr);
                 g_SetEnabled(image, true, nullptr);
                 view.images.push_back(image);
@@ -481,7 +455,7 @@ namespace SkillCooldown
             // Transform. Only the actual diamond Image bounds define its size.
             Rect visual{};
             if (!DiamondBounds(view, parent, visual))
-            { RemoveCharges(view); return ChargeFailure(view, ChargeView::Stage::InvalidBounds); }
+            { RemoveCharges(view); return false; }
             view.maximum = maximum;
             return true;
         }
@@ -496,7 +470,7 @@ namespace SkillCooldown
             g_SetScale(view.transform, &unit, nullptr);
             if (!std::isfinite(timerRect.x) || !std::isfinite(timerRect.y) ||
                 !std::isfinite(timerRect.width) || !std::isfinite(timerRect.height) || timerRect.height <= 0)
-                return ChargeFailure(view, ChargeView::Stage::InvalidBounds);
+                return false;
             // Give each native sprite a readable size, independent of the
             // battle button template's tiny, curved charge layout. Three
             // diamonds and their gaps occupy 98% of the cooldown diameter.
@@ -508,7 +482,7 @@ namespace SkillCooldown
             for (int i = 0; i < view.maximum; ++i)
             {
                 void* image = view.images[i];
-                if (!Alive(image)) return ChargeFailure(view, ChargeView::Stage::MissingDiamond);
+                if (!Alive(image)) return false;
                 void* transform = g_Transform(image, nullptr);
                 // Reset our previous scale so repeated updates cannot enlarge
                 // the icons cumulatively. Preserve the native sprite aspect.
@@ -516,12 +490,12 @@ namespace SkillCooldown
                 Rect bounds{};
                 float depth = 0;
                 if (!BoundsInRow(transform, parent, bounds, depth))
-                    return ChargeFailure(view, ChargeView::Stage::InvalidBounds);
+                    return false;
                 const float factor = side / std::fmax(bounds.width, bounds.height);
                 const Vec3 scale{factor, factor, 1};
                 g_SetScale(transform, &scale, nullptr);
                 if (!BoundsInRow(transform, parent, bounds, depth))
-                    return ChargeFailure(view, ChargeView::Stage::InvalidBounds);
+                    return false;
                 const Vec3 zero{};
                 Vec3 origin{}, local{}, world{};
                 g_TransformPoint(&origin, transform, &zero, nullptr);
@@ -530,13 +504,12 @@ namespace SkillCooldown
                 local.y += centerY - (bounds.y + bounds.height * 0.5f);
                 g_TransformPoint(&world, parent, &local, nullptr);
                 if (!std::isfinite(world.x) || !std::isfinite(world.y) || !std::isfinite(world.z))
-                    return ChargeFailure(view, ChargeView::Stage::InvalidBounds);
+                    return false;
                 g_SetPosition(transform, &world, nullptr);
                 const Color& color = i < skill.available ? view.enabled : view.disabled;
                 g_SetColor(image, &color, nullptr);
             }
             g_SetActive(g_GameObject(view.transform, nullptr), true, nullptr);
-            view.stage = ChargeView::Stage::Shown;
             return true;
         }
 
@@ -545,7 +518,7 @@ namespace SkillCooldown
             g_SetupCharges(object, maximum, method);
             __try
             {
-                if (!g_UIFault.load()) ObserveChargeSource(object, maximum);
+                if (!g_UIFault.load()) RememberChargeSource(object);
             }
             __except (EXCEPTION_EXECUTE_HANDLER) { /* Ignore an unavailable optional template. */ }
         }
@@ -558,7 +531,7 @@ namespace SkillCooldown
             __except (EXCEPTION_EXECUTE_HANDLER)
             {
                 g_ChargeSources.fill(nullptr);
-                return ChargeFailure(*view, ChargeView::Stage::NativeFault);
+                return false;
             }
         }
 
@@ -597,28 +570,6 @@ namespace SkillCooldown
             return true;
         }
 
-        void TraceDisplay(Row& row, const Skill& e, bool hasE, const Skill& q, bool hasQ,
-                          bool visibleE, bool visibleQ)
-        {
-            if (g_TracePath.empty()) return;
-            const unsigned seen = 1u | ((hasE && e.remaining > 0) ? 2u : 0u) |
-                                       ((hasQ && q.remaining > 0) ? 4u : 0u) |
-                                       (visibleE ? 8u : 0u) | (visibleQ ? 16u : 0u);
-            const unsigned chargeBit = 1u << static_cast<unsigned>(row.charges.stage);
-            const bool chargeEvent = visibleE && hasE && e.maximum > 1 && !(row.chargeTraced & chargeBit);
-            if ((row.traced & seen) == seen && !chargeEvent) return;
-            row.traced |= seen;
-            if (chargeEvent) row.chargeTraced |= chargeBit;
-            static constexpr const char* stages[] = {"idle", "waiting-source", "missing-panel", "unsupported-count",
-                "missing-circle", "clone-failed", "missing-metadata", "missing-diamond", "invalid-bounds", "shown", "native-fault"};
-            std::ofstream log(g_TracePath, std::ios::app);
-            if (log) log << "[DisplaySkillCD] slot=" << row.slot
-                         << " E=" << hasE << '/' << e.remaining << " charges=" << e.available << '/' << e.maximum
-                         << " Q=" << hasQ << '/' << q.remaining
-                         << " visible=" << visibleE << '/' << visibleQ
-                         << " diamonds=" << stages[static_cast<unsigned>(row.charges.stage)] << '\n';
-        }
-
         void UpdateView(void* object, Row& row)
         {
             if (!Config::Get().display_skill_cd || g_UIFault.load())
@@ -635,7 +586,6 @@ namespace SkillCooldown
                 return;
             }
             Skill e, q;
-            row.charges.stage = ChargeView::Stage::Idle;
             // Like native IEMBBEOJEEK's cooldown adapter, displaying the timer
             // does not require valid charge metadata. Keep that requirement
             // only for the optional native charge indicators.
@@ -649,7 +599,6 @@ namespace SkillCooldown
                 ShowText(row.e, nullptr);
                 ShowText(row.q, nullptr);
                 HideCharges(row.charges);
-                TraceDisplay(row, e, hasE, q, hasQ, false, false);
                 return;
             }
             void* source = Read<void*>(object, 0xA0); // Clone; never overwrite swap cooldown.
@@ -683,7 +632,6 @@ namespace SkillCooldown
                 }
             }
             else ShowText(row.q, nullptr);
-            TraceDisplay(row, e, hasE, q, hasQ, visibleE, visibleQ);
         }
 
         void GuardRestore(Row* row)
@@ -729,12 +677,11 @@ namespace SkillCooldown
             }
         }
 
-        void RefreshRow(void* object, uint64_t guid, int slot)
+        void RefreshRow(void* object, uint64_t guid)
         {
             Row& row = g_Rows[object];
-            if (row.guid != guid) { GuardView(object, &row, true); row.traced = 0; row.chargeTraced = 0; }
+            if (row.guid != guid) GuardView(object, &row, true);
             row.guid = guid;
-            row.slot = slot;
             RememberParty(object, guid);
         }
 
@@ -743,7 +690,7 @@ namespace SkillCooldown
             auto it = g_Rows.find(object);
             if (it != g_Rows.end()) GuardView(object, &it->second, true);
             g_Setup(object, guid, method);
-            RefreshRow(object, guid, -1);
+            RefreshRow(object, guid);
         }
 
         void __fastcall HookBind(void* controller, void* object, int slot, uint64_t guid,
@@ -754,7 +701,7 @@ namespace SkillCooldown
                 std::lock_guard<std::mutex> lock(g_PartyMutex);
                 g_Controller.store(controller);
             }
-            RefreshRow(object, guid, slot);
+            RefreshRow(object, guid);
         }
 
         void DiscoverRow(void* object)
@@ -762,7 +709,7 @@ namespace SkillCooldown
             __try
             {
                 const auto guid = Read<uint64_t>(object, 0x178);
-                if (guid) RefreshRow(object, guid, -1);
+                if (guid) RefreshRow(object, guid);
             }
             __except (EXCEPTION_EXECUTE_HANDLER) { g_UIFault.store(true); }
         }
@@ -842,10 +789,6 @@ namespace SkillCooldown
             std::cout << "[WARN] Skill cooldown functions require the verified CN 7.1 layout.\n";
             return;
         }
-        g_TracePath = Config::GetConfigPath();
-        g_TracePath.resize(g_TracePath.find_last_of("\\/") + 1);
-        g_TracePath += "skill-cooldown.log";
-        { std::ofstream log(g_TracePath, std::ios::trunc); if (log) log << "DisplaySkillCD native diamonds revision 4: enlarged horizontal layout (CN 7.1)\n"; }
         bool valid = true;
 #define LOAD(name, field) valid = Load(field, Native::name) && valid
         LOAD(ResolveSkill, g_Resolve); LOAD(DecodeFloat, g_DecodeFloat); LOAD(DecodeInt, g_DecodeInt);
